@@ -3,8 +3,6 @@ package bitmask
 import (
 	"encoding/gob"
 	"fmt"
-	"github.com/jneo8/logger-go"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"os"
 	"reflect"
@@ -19,7 +17,6 @@ type PBFMasks struct {
 	RelNodes    *Bitmask
 	RelWays     *Bitmask
 	RelRelation *Bitmask
-	Logger      *log.Logger
 }
 
 // NewPBFMasks - constructor
@@ -32,7 +29,6 @@ func NewPBFMasks() *PBFMasks {
 		RelNodes:    NewBitMask(),
 		RelWays:     NewBitMask(),
 		RelRelation: NewBitMask(),
-		Logger:      logger.NewLogger(),
 	}
 }
 
@@ -54,12 +50,11 @@ func (m *PBFMasks) ReadFrom(tap io.Reader) (int64, error) {
 func (m *PBFMasks) WriteToFile(path string) error {
 	file, err := os.Create(path)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	if _, err := m.WriteTo(file); err != nil {
 		return err
 	}
-	m.Logger.Debug("wrote bitmask:", path)
 	return nil
 }
 
@@ -68,18 +63,16 @@ func (m *PBFMasks) ReadFromFile(path string) error {
 
 	// bitmask file doesn't exist
 	if _, err := os.Stat(path); err != nil {
-		fmt.Println("bitmask file not found:", path)
-		os.Exit(1)
+		return fmt.Errorf("bitmask file not found: %s", path)
 	}
 
 	file, err := os.Open(path)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	if _, err := m.ReadFrom(file); err != nil {
 		return err
 	}
-	m.Logger.Debug("read bitmask:", path)
 	return nil
 }
 
