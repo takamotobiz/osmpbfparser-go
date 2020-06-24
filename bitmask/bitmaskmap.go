@@ -3,8 +3,9 @@ package bitmask
 import (
 	"encoding/gob"
 	"fmt"
+	"github.com/jneo8/logger-go"
+	log "github.com/sirupsen/logrus"
 	"io"
-	"log"
 	"os"
 	"reflect"
 )
@@ -18,6 +19,7 @@ type PBFMasks struct {
 	RelNodes    *Bitmask
 	RelWays     *Bitmask
 	RelRelation *Bitmask
+	Logger      *log.Logger
 }
 
 // NewPBFMasks - constructor
@@ -30,6 +32,7 @@ func NewPBFMasks() *PBFMasks {
 		RelNodes:    NewBitMask(),
 		RelWays:     NewBitMask(),
 		RelRelation: NewBitMask(),
+		Logger:      logger.NewLogger(),
 	}
 }
 
@@ -56,7 +59,7 @@ func (m *PBFMasks) WriteToFile(path string) error {
 	if _, err := m.WriteTo(file); err != nil {
 		return err
 	}
-	log.Println("wrote bitmask:", path)
+	m.Logger.Debug("wrote bitmask:", path)
 	return nil
 }
 
@@ -76,7 +79,7 @@ func (m *PBFMasks) ReadFromFile(path string) error {
 	if _, err := m.ReadFrom(file); err != nil {
 		return err
 	}
-	log.Println("read bitmask:", path)
+	m.Logger.Debug("read bitmask:", path)
 	return nil
 }
 
