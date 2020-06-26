@@ -6,6 +6,7 @@ GOFILES := $(shell find . -name "*.go")
 TESTFOLDER := $(shell $(GO) list ./... | grep -E 'osmpbfparser-go$$|cmd' | grep -v examples)
 TESTTAGS ?= ""
 PROJ = osmpbfparser-go
+ZONE ?= asia/taiwan
 
 ##@ Show
 
@@ -49,6 +50,11 @@ install-lint:  ## Install golangci-lint to ./bin
 .PHONY: linter-run
 linter-run:  ## Run linter for all
 	./bin/golangci-lint run ./...
+
+##@ OSM
+
+downloasd-pbf:  ## Download osm pbf file. Use ZONE variable to control which area to download. Default is asia/taiwan.
+	wget http://download.geofabrik.de/${ZONE}-latest.osm.pbf -P ./assert
 
 
 ##@ Help
