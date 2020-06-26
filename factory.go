@@ -20,3 +20,13 @@ func newPBFIndexer(
 		PBFMasks: pbfMasks,
 	}
 }
+
+func newPBFRelationMemberIndexer(
+	pbfFile string,
+	pbfMasks *bitmask.PBFMasks,
+) pbfDataParser {
+	return &PBFRelationMemberIndexer{
+		PBFFile:  pbfFile,
+		PBFMasks: pbfMasks,
+	}
+}
