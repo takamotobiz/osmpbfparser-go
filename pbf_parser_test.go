@@ -1,10 +1,10 @@
 package osmpbfparser
 
 import (
-	"testing"
-
 	"github.com/jneo8/osmpbfparser-go/bitmask"
+	log "github.com/sirupsen/logrus"
 	"github.com/syndtr/goleveldb/leveldb"
+	"testing"
 )
 
 func Test_pbfParser_Run(t *testing.T) {
@@ -12,6 +12,7 @@ func Test_pbfParser_Run(t *testing.T) {
 		PBFMasks *bitmask.PBFMasks
 		LevelDB  *leveldb.DB
 		Args     Args
+		Logger   *log.Logger
 	}
 	tests := []struct {
 		name    string
@@ -24,7 +25,10 @@ func Test_pbfParser_Run(t *testing.T) {
 			fields: fields{
 				Args: Args{
 					LevelDBPath: "/tmp/osmpbfparser",
+					PBFFile:     "./assert/test.pbf",
 				},
+				Logger:   log.New(),
+				PBFMasks: bitmask.NewPBFMasks(),
 			},
 		},
 	}
@@ -34,6 +38,7 @@ func Test_pbfParser_Run(t *testing.T) {
 				PBFMasks: tt.fields.PBFMasks,
 				LevelDB:  tt.fields.LevelDB,
 				Args:     tt.fields.Args,
+				Logger:   tt.fields.Logger,
 			}
 			if err := p.Run(); (err != nil) != tt.wantErr {
 				t.Errorf("pbfParser.Run() error = %v, wantErr %v", err, tt.wantErr)

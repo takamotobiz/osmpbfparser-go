@@ -1,15 +1,17 @@
 package osmpbfparser
 
 import (
-// "github.com/thomersch/gosmparse"
+	log "github.com/sirupsen/logrus"
+	"github.com/thomersch/gosmparse"
 )
 
 // PBFParser ...
 type PBFParser interface {
 	Run() error
+	SetLogger(*log.Logger)
 }
 
-// type pbfDateParser interface {
-// 	gosmparse.OSMReader
-// 	Run() error
-// }
+type pbfDataParser interface {
+	gosmparse.OSMReader
+	Run() error
+}
