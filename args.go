@@ -8,4 +8,5 @@ import (
 type Args struct {
 	PBFFile     string
 	LevelDBPath string
+	FlushSize   int
 }

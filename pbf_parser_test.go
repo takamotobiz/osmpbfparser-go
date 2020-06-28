@@ -1,6 +1,7 @@
 package osmpbfparser
 
 import (
+	"github.com/jneo8/logger-go"
 	"github.com/jneo8/osmpbfparser-go/bitmask"
 	log "github.com/sirupsen/logrus"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -27,7 +28,7 @@ func Test_pbfParser_Run(t *testing.T) {
 					LevelDBPath: "/tmp/osmpbfparser",
 					PBFFile:     "./assert/test.pbf",
 				},
-				Logger:   log.New(),
+				Logger:   logger.NewLogger(),
 				PBFMasks: bitmask.NewPBFMasks(),
 			},
 		},
