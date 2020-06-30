@@ -7,11 +7,17 @@ import (
 
 // PBFParser ...
 type PBFParser interface {
-	Run() error
+	Iterator() <-chan Element
 	SetLogger(*log.Logger)
+	Err() error
 }
 
 type pbfDataParser interface {
 	gosmparse.OSMReader
 	Run() error
+}
+
+// Reader ...
+type Reader interface {
+	Run(emt Element)
 }
