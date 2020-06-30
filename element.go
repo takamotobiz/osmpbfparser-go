@@ -16,7 +16,7 @@ type Element struct {
 	Role     int // 0=outer, 1=inner
 }
 
-// ToByte convert element struct to bytes.
+// ToBytes convert element struct to bytes.
 func (e *Element) ToBytes() ([]byte, error) {
 	var buf bytes.Buffer
 	encoder := gob.NewEncoder(&buf)

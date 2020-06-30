@@ -1,8 +1,8 @@
 package osmpbfparser
 
 import (
+	"github.com/jneo8/logger-go"
 	"github.com/jneo8/osmpbfparser-go/bitmask"
-	log "github.com/sirupsen/logrus"
 )
 
 // New ...
@@ -11,7 +11,7 @@ func New(
 ) PBFParser {
 	return &pbfParser{
 		Args:   args,
-		Logger: log.New(),
+		Logger: logger.NewLogger(),
 	}
 }
 

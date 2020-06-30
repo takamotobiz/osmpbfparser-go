@@ -1,15 +1,12 @@
 package osmpbfparser
 
 import (
-	"bytes"
-	"encoding/binary"
 	"github.com/jneo8/osmpbfparser-go/bitmask"
 	log "github.com/sirupsen/logrus"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/thomersch/gosmparse"
 	"io"
-	"math"
 	"os"
 	"strconv"
 	"sync"
@@ -19,8 +16,9 @@ type pbfParser struct {
 	PBFMasks *bitmask.PBFMasks
 
 	// leveldb
-	LevelDB *leveldb.DB
-	Args    Args
+	DB    *leveldb.DB
+	Batch *leveldb.Batch
+	Args  Args
 
 	// Log
 	Logger      *log.Logger
@@ -51,8 +49,8 @@ func (p *pbfParser) Iterator() <-chan Element {
 			return
 		}
 		defer db.Close()
-		p.LevelDB = db
-		p.Logger.Info("Init leveldb")
+		p.DB = db
+		p.Logger.Infof("Init leveldb at %s", p.Args.LevelDBPath)
 
 		// bitmask
 		p.PBFMasks = bitmask.NewPBFMasks()
@@ -81,7 +79,9 @@ func (p *pbfParser) Iterator() <-chan Element {
 
 		// FirstRound
 		// Put way refs, relation member into db.
-		batch := leveldb.MakeBatch(p.Args.FlushSize * 1024 * 1024)
+		p.Batch = leveldb.MakeBatch(p.Args.BatchSize)
+		defer p.Batch.Reset()
+
 		p.elementChan = make(chan Element)
 
 		firstRoundWg := sync.WaitGroup{}
@@ -89,24 +89,32 @@ func (p *pbfParser) Iterator() <-chan Element {
 		errCount := make(map[int]int)
 		go func() {
 			defer firstRoundWg.Done()
+			idx := 0
 			for emt := range p.elementChan {
+				idx++
+				// Check batch size every batchsize.
+				if idx%p.Args.BatchSize == 0 {
+					if err := p.checkBatch(); err != nil {
+						p.Error = err
+					}
+				}
 				switch emt.Type {
 				case 0:
 					if p.PBFMasks.WayRefs.Has(emt.Node.ID) || p.PBFMasks.RelNodes.Has(emt.Node.ID) {
 						id, b := nodeToBytes(emt.Node)
-						batch.Put(
+						p.Batch.Put(
 							[]byte(id),
 							b,
 						)
 					}
 				case 1:
-					if p.PBFMasks.Ways.Has(emt.Way.ID) {
+					if p.PBFMasks.RelWays.Has(emt.Way.ID) {
 						emtBytes, err := emt.ToBytes()
 						if err != nil {
 							errCount[1]++
 							continue
 						}
-						batch.Put(
+						p.Batch.Put(
 							[]byte("W"+strconv.FormatInt(emt.Way.ID, 10)),
 							emtBytes,
 						)
@@ -118,15 +126,15 @@ func (p *pbfParser) Iterator() <-chan Element {
 							errCount[2]++
 							continue
 						}
-						batch.Put(
+						p.Batch.Put(
 							[]byte("R"+strconv.FormatInt(emt.Relation.ID, 10)),
 							emtBytes,
 						)
-
 					}
 				}
 			}
 		}()
+
 		firstRoundDecoder := gosmparse.NewDecoder(reader)
 		if err := firstRoundDecoder.Parse(p); err != nil {
 			p.Error = err
@@ -134,7 +142,15 @@ func (p *pbfParser) Iterator() <-chan Element {
 		}
 		close(p.elementChan)
 		firstRoundWg.Wait()
+
+		// Flush batch.
+		if err := p.flushBatch(true); err != nil {
+			p.Error = err
+			return
+		}
 		p.Logger.Info("Finish first round")
+
+		// Rewind pbf file reader
 		if _, err := reader.Seek(0, io.SeekStart); err != nil {
 			p.Error = err
 			return
@@ -149,7 +165,22 @@ func (p *pbfParser) Iterator() <-chan Element {
 		go func() {
 			defer finalRoundWg.Done()
 			for emt := range p.elementChan {
-				outputCh <- emt
+				switch emt.Type {
+				case 0:
+					if p.PBFMasks.Nodes.Has(emt.Node.ID) {
+						outputCh <- emt
+					}
+				case 1:
+					if p.PBFMasks.Ways.Has(emt.Way.ID) {
+						emts, err := p.dbLookupWayElement(&emt.Way)
+						if err != nil {
+							p.Logger.Warning(err)
+							continue
+						}
+						emt.Elements = emts
+						outputCh <- emt
+					}
+				}
 			}
 		}()
 
@@ -194,11 +225,44 @@ func (p *pbfParser) SetLogger(logger *log.Logger) {
 	p.Logger = logger
 }
 
-func nodeToBytes(n gosmparse.Node) (string, []byte) {
-	var buf bytes.Buffer
+func (p *pbfParser) dbLookupWayElement(way *gosmparse.Way) ([]Element, error) {
+	var emts []Element
+	for _, nodeID := range way.NodeIDs {
+		id := strconv.FormatInt(nodeID, 10)
+		b, err := p.DB.Get(
+			[]byte(id),
+			nil,
+		)
+		if err != nil {
+			return emts, err
+		}
+		node := bytesToNode(b)
+		emt := Element{
+			Type: 0,
+			Node: node,
+		}
+		emts = append(emts, emt)
+	}
+	return emts, nil
+}
 
-	var latBytes = make([]byte, 8)
-	binary.BigEndian.PutUint64(latBytes, math.Float64bits(n.Lat))
-	buf.Write(latBytes)
-	return strconv.FormatInt(n.ID, 10), buf.Bytes()
+func (p *pbfParser) checkBatch() error {
+	if p.Batch.Len() >= p.Args.BatchSize {
+		if err := p.flushBatch(true); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (p *pbfParser) flushBatch(sync bool) error {
+	writeOpts := opt.WriteOptions{
+		NoWriteMerge: true,
+		Sync:         sync,
+	}
+	if err := p.DB.Write(p.Batch, &writeOpts); err != nil {
+		return err
+	}
+	p.Batch.Reset()
+	return nil
 }
