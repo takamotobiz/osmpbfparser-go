@@ -25,3 +25,11 @@ func (e *Element) ToBytes() ([]byte, error) {
 	}
 	return buf.Bytes(), nil
 }
+
+// BytesToElement ...
+func BytesToElement(b []byte) (Element, error) {
+	decoder := gob.NewDecoder(bytes.NewReader(b))
+	var element Element
+	err := decoder.Decode(&element)
+	return element, err
+}

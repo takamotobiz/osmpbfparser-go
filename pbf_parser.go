@@ -162,28 +162,44 @@ func (p *pbfParser) Iterator() <-chan Element {
 
 		finalRoundWg := sync.WaitGroup{}
 		finalRoundWg.Add(1)
+		statistics := make(map[int]int)
 		go func() {
 			defer finalRoundWg.Done()
 			for emt := range p.elementChan {
 				switch emt.Type {
 				case 0:
 					if p.PBFMasks.Nodes.Has(emt.Node.ID) {
+						statistics[0]++
 						outputCh <- emt
 					}
 				case 1:
 					if p.PBFMasks.Ways.Has(emt.Way.ID) {
-						emts, err := p.dbLookupWayElement(&emt.Way)
+						emts, err := p.dbLookupWayEmts(&emt.Way)
 						if err != nil {
 							p.Logger.Warning(err)
+							statistics[11]++
 							continue
 						}
 						emt.Elements = emts
+						statistics[1]++
+						outputCh <- emt
+					}
+
+				case 2:
+					if p.PBFMasks.Relations.Has(emt.Relation.ID) {
+						emts, err := p.dbLookupRelationEmts(&emt.Relation, []int64{})
+						if err != nil {
+							// p.Logger.Warning(err)
+							statistics[22]++
+							continue
+						}
+						emt.Elements = emts
+						statistics[2]++
 						outputCh <- emt
 					}
 				}
 			}
 		}()
-
 		decoder := gosmparse.NewDecoder(reader)
 		if err := decoder.Parse(p); err != nil {
 			p.Error = err
@@ -191,6 +207,7 @@ func (p *pbfParser) Iterator() <-chan Element {
 		}
 		close(p.elementChan)
 		finalRoundWg.Wait()
+		p.Logger.Infof("%+v", statistics)
 	}()
 
 	return outputCh
@@ -225,27 +242,6 @@ func (p *pbfParser) SetLogger(logger *log.Logger) {
 	p.Logger = logger
 }
 
-func (p *pbfParser) dbLookupWayElement(way *gosmparse.Way) ([]Element, error) {
-	var emts []Element
-	for _, nodeID := range way.NodeIDs {
-		id := strconv.FormatInt(nodeID, 10)
-		b, err := p.DB.Get(
-			[]byte(id),
-			nil,
-		)
-		if err != nil {
-			return emts, err
-		}
-		node := bytesToNode(b)
-		emt := Element{
-			Type: 0,
-			Node: node,
-		}
-		emts = append(emts, emt)
-	}
-	return emts, nil
-}
-
 func (p *pbfParser) checkBatch() error {
 	if p.Batch.Len() >= p.Args.BatchSize {
 		if err := p.flushBatch(true); err != nil {
@@ -265,4 +261,120 @@ func (p *pbfParser) flushBatch(sync bool) error {
 	}
 	p.Batch.Reset()
 	return nil
+}
+
+func (p *pbfParser) dbLookupNodeElementByID(id int64) (Element, error) {
+	b, err := p.DB.Get(
+		[]byte(strconv.FormatInt(id, 10)),
+		nil,
+	)
+	if err != nil {
+		return Element{}, err
+	}
+	node := bytesToNode(b)
+	emt := Element{
+		Type: 0,
+		Node: node,
+	}
+	return emt, nil
+}
+
+func (p *pbfParser) dbLookupWayElementByID(id int64) (Element, error) {
+	b, err := p.DB.Get(
+		[]byte("W"+strconv.FormatInt(id, 10)),
+		nil,
+	)
+	if err != nil {
+		return Element{}, err
+	}
+	emt, err := BytesToElement(b)
+	if err != nil {
+		return emt, err
+	}
+	return emt, nil
+}
+
+func (p *pbfParser) dbLookupRelationElementByID(id int64) (Element, error) {
+	b, err := p.DB.Get(
+		[]byte("R"+strconv.FormatInt(id, 10)),
+		nil,
+	)
+	if err != nil {
+		return Element{}, err
+	}
+	emt, err := BytesToElement(b)
+	if err != nil {
+		return emt, err
+	}
+	return emt, nil
+}
+
+func (p *pbfParser) dbLookupWayEmts(way *gosmparse.Way) ([]Element, error) {
+	var emts []Element
+	for _, nodeID := range way.NodeIDs {
+		emt, err := p.dbLookupNodeElementByID(nodeID)
+		if err != nil {
+			return emts, err
+		}
+		emts = append(emts, emt)
+	}
+	return emts, nil
+}
+
+func (p *pbfParser) dbLookupRelationEmts(relation *gosmparse.Relation, processedList []int64) ([]Element, error) {
+	var emts []Element
+	processedList = append(processedList, relation.ID)
+	for _, member := range relation.Members {
+		var element Element
+		switch member.Type {
+		case 0:
+			emt, err := p.dbLookupNodeElementByID(member.ID)
+			if err != nil {
+				return emts, err
+			}
+			element = emt
+		case 1:
+			emt, err := p.dbLookupWayElementByID(member.ID)
+			if err != nil {
+				return emts, err
+			}
+
+			memberEmts, err := p.dbLookupWayEmts(&emt.Way)
+			if err != nil {
+				return emts, err
+			}
+			emt.Elements = memberEmts
+			element = emt
+		case 2:
+			// Passing if already processed.
+			var processed bool
+			for _, processedID := range processedList {
+				if member.ID == processedID {
+					processed = true
+				}
+			}
+			if processed {
+				continue
+			}
+			emt, err := p.dbLookupRelationElementByID(member.ID)
+			if err != nil {
+				return emts, err
+			}
+			memberEmts, err := p.dbLookupRelationEmts(&emt.Relation, processedList)
+			if err != nil {
+				return emts, err
+			}
+			emt.Elements = memberEmts
+			element = emt
+		}
+		switch member.Role {
+		case "inner":
+			element.Role = 1
+		default:
+			// default is outer
+			element.Role = 0
+		}
+		emts = append(emts, element)
+	}
+	return emts, nil
 }
