@@ -135,7 +135,10 @@ func (p *pbfParser) Iterator() <-chan Element {
 		close(p.elementChan)
 		firstRoundWg.Wait()
 		p.Logger.Info("Finish first round")
-		reader.Seek(io.SeekStart, 0)
+		if _, err := reader.Seek(0, io.SeekStart); err != nil {
+			p.Error = err
+			return
+		}
 
 		// Final round.
 		// Re-init element chan
