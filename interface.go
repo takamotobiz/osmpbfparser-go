@@ -10,6 +10,7 @@ type PBFParser interface {
 	Iterator() <-chan Element
 	SetLogger(*log.Logger)
 	Err() error
+	Close() error
 }
 
 type pbfDataParser interface {

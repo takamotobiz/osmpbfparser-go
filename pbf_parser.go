@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"time"
 )
 
 type pbfParser struct {
@@ -31,6 +32,10 @@ func (p *pbfParser) Err() error {
 	return p.Error
 }
 
+func (p *pbfParser) Close() error {
+	return os.RemoveAll(p.Args.LevelDBPath)
+}
+
 // Run ...
 func (p *pbfParser) Iterator() <-chan Element {
 	p.Logger.Infof("%+v", p)
@@ -39,6 +44,7 @@ func (p *pbfParser) Iterator() <-chan Element {
 
 	go func() {
 		defer close(outputCh)
+		st := time.Now()
 		db, err := leveldb.OpenFile(
 			p.Args.LevelDBPath,
 			&opt.Options{DisableBlockCache: true},
@@ -207,9 +213,34 @@ func (p *pbfParser) Iterator() <-chan Element {
 		}
 		close(p.elementChan)
 		finalRoundWg.Wait()
-		p.Logger.Infof("%+v", statistics)
-	}()
 
+		// Print result.
+		fInfo, err := reader.Stat()
+		if err != nil {
+			p.Error = err
+			return
+		}
+		p.Logger.Infof(
+			`Parser finish.
+				PBF: %s
+				FileSize: %d MB
+				Timeit: %2f Secs
+				ProcessRelation: %d,
+				ProcessWay: %d,
+				ProcessNode: %d,
+				FatalRelation: %d,
+				FatalWay: %d,
+			`,
+			p.Args.PBFFile,
+			fInfo.Size()/(1024*1024),
+			time.Since(st).Seconds(),
+			statistics[2],
+			statistics[1],
+			statistics[0],
+			statistics[22],
+			statistics[11],
+		)
+	}()
 	return outputCh
 }
 
