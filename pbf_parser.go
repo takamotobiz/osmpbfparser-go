@@ -41,8 +41,6 @@ func (p *pbfParser) Close() error {
 
 // Run ...
 func (p *pbfParser) Iterator() <-chan Element {
-	p.Logger.Infof("%+v", p)
-
 	outputCh := make(chan Element)
 
 	go func() {
