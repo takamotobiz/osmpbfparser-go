@@ -12,6 +12,7 @@ func New(
 	return &pbfParser{
 		Args:   args,
 		Logger: logger.NewLogger(),
+		Report: Report{},
 	}
 }
 

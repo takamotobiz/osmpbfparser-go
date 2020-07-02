@@ -26,6 +26,9 @@ type pbfParser struct {
 	elementChan chan Element
 
 	Error error
+
+	// Report
+	Report Report
 }
 
 func (p *pbfParser) Err() error {
@@ -45,6 +48,23 @@ func (p *pbfParser) Iterator() <-chan Element {
 	go func() {
 		defer close(outputCh)
 		st := time.Now()
+
+		// reader .
+		reader, err := os.Open(p.Args.PBFFile)
+		if err != nil {
+			p.Error = err
+			return
+		}
+		defer reader.Close()
+
+		// Get file size
+		fInfo, err := reader.Stat()
+		if err != nil {
+			p.Error = err
+			return
+		}
+		p.Report.Fizesize = fInfo.Size()
+
 		db, err := leveldb.OpenFile(
 			p.Args.LevelDBPath,
 			&opt.Options{DisableBlockCache: true},
@@ -76,13 +96,6 @@ func (p *pbfParser) Iterator() <-chan Element {
 
 		p.Logger.Info("Finish index")
 
-		reader, err := os.Open(p.Args.PBFFile)
-		if err != nil {
-			p.Error = err
-			return
-		}
-		defer reader.Close()
-
 		// FirstRound
 		// Put way refs, relation member into db.
 		p.Batch = leveldb.MakeBatch(p.Args.BatchSize)
@@ -92,7 +105,6 @@ func (p *pbfParser) Iterator() <-chan Element {
 
 		firstRoundWg := sync.WaitGroup{}
 		firstRoundWg.Add(1)
-		errCount := make(map[int]int)
 		go func() {
 			defer firstRoundWg.Done()
 			idx := 0
@@ -117,7 +129,7 @@ func (p *pbfParser) Iterator() <-chan Element {
 					if p.PBFMasks.RelWays.Has(emt.Way.ID) {
 						emtBytes, err := emt.ToBytes()
 						if err != nil {
-							errCount[1]++
+							p.Report.FatalWay++
 							continue
 						}
 						p.Batch.Put(
@@ -129,7 +141,7 @@ func (p *pbfParser) Iterator() <-chan Element {
 					if p.PBFMasks.RelRelation.Has(emt.Relation.ID) {
 						emtBytes, err := emt.ToBytes()
 						if err != nil {
-							errCount[2]++
+							p.Report.FatalRelation++
 							continue
 						}
 						p.Batch.Put(
@@ -168,14 +180,13 @@ func (p *pbfParser) Iterator() <-chan Element {
 
 		finalRoundWg := sync.WaitGroup{}
 		finalRoundWg.Add(1)
-		statistics := make(map[int]int)
 		go func() {
 			defer finalRoundWg.Done()
 			for emt := range p.elementChan {
 				switch emt.Type {
 				case 0:
 					if p.PBFMasks.Nodes.Has(emt.Node.ID) {
-						statistics[0]++
+						p.Report.ProcessedNode++
 						outputCh <- emt
 					}
 				case 1:
@@ -183,11 +194,11 @@ func (p *pbfParser) Iterator() <-chan Element {
 						emts, err := p.dbLookupWayEmts(&emt.Way)
 						if err != nil {
 							p.Logger.Warning(err)
-							statistics[11]++
+							p.Report.FatalWay++
 							continue
 						}
 						emt.Elements = emts
-						statistics[1]++
+						p.Report.ProcessedWay++
 						outputCh <- emt
 					}
 
@@ -196,11 +207,11 @@ func (p *pbfParser) Iterator() <-chan Element {
 						emts, err := p.dbLookupRelationEmts(&emt.Relation, []int64{})
 						if err != nil {
 							// p.Logger.Warning(err)
-							statistics[22]++
+							p.Report.FatalRelation++
 							continue
 						}
 						emt.Elements = emts
-						statistics[2]++
+						p.Report.ProcessedRelation++
 						outputCh <- emt
 					}
 				}
@@ -214,32 +225,9 @@ func (p *pbfParser) Iterator() <-chan Element {
 		close(p.elementChan)
 		finalRoundWg.Wait()
 
-		// Print result.
-		fInfo, err := reader.Stat()
-		if err != nil {
-			p.Error = err
-			return
-		}
-		p.Logger.Infof(
-			`Parser finish.
-				PBF: %s
-				FileSize: %d MB
-				Timeit: %2f Secs
-				ProcessRelation: %d,
-				ProcessWay: %d,
-				ProcessNode: %d,
-				FatalRelation: %d,
-				FatalWay: %d,
-			`,
-			p.Args.PBFFile,
-			fInfo.Size()/(1024*1024),
-			time.Since(st).Seconds(),
-			statistics[2],
-			statistics[1],
-			statistics[0],
-			statistics[22],
-			statistics[11],
-		)
+		// Report
+		p.Report.SpendTime = time.Since(st)
+		p.Logger.Infof(p.Report.GetReport())
 	}()
 	return outputCh
 }
