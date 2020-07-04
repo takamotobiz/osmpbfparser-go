@@ -9,17 +9,23 @@ PROJ = osmpbfparser-go
 ZONE ?= asia/taiwan
 
 ##@ Show
+.PHONY: count-line
 
 count-line:  ## Count *.go line in project
 	    find . -name '*.go' | xargs wc -l
 
-##@ test
+##@ Run
+.PHONY: run-example
 
-.PHONY: install-richgo
+run-example:  ## Run ./cmd/example/main.go
+	go run ./cmd/example/main.go
+
+##@ Test
+.PHONY: test install-richgo
+
 install-richgo:  ## Install richgo
 	go get -u github.com/kyoh86/richgo
 
-.PHONY: test
 test:  ## Run test
 	echo "mode: count" > coverage.out
 	for d in $(TESTFOLDER); do \
@@ -42,16 +48,16 @@ test:  ## Run test
 	done
 
 ##@ lint
+.PHONY: linter-run install-lint
 
-.PHONY: install-lint
 install-lint:  ## Install golangci-lint to ./bin
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.27.0
 
-.PHONY: linter-run
 linter-run:  ## Run linter for all
 	./bin/golangci-lint run ./...
 
 ##@ OSM
+.PHONY: download-pbf
 
 downloasd-pbf:  ## Download osm pbf file. Use ZONE variable to control which area to download. Default is asia/taiwan.
 	wget http://download.geofabrik.de/${ZONE}-latest.osm.pbf -P ./assert
