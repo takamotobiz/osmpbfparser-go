@@ -8,7 +8,7 @@ import (
 func main() {
 	parser := osmpbfparser.New(
 		osmpbfparser.Args{
-			PBFFile:     "./assert/taiwan-latest.osm.pbf",
+			PBFFile:     "./assert/test.pbf",
 			LevelDBPath: "/tmp/osmpbfparser",
 			BatchSize:   10000,
 		},
