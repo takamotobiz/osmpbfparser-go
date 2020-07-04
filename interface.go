@@ -18,6 +18,11 @@ type pbfDataParser interface {
 	Run() error
 }
 
+type pbfDataCounter interface {
+	gosmparse.OSMReader
+	Run() (nodeCount int, wayCount int, relationCount int, err error)
+}
+
 // Reader ...
 type Reader interface {
 	Run(emt Element)

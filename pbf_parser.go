@@ -47,6 +47,19 @@ func (p *pbfParser) Iterator() <-chan Element {
 		defer close(outputCh)
 		st := time.Now()
 
+		// counter
+		p.Logger.Info("Start Count")
+		counter := newPBFCounter(
+			p.Args.PBFFile,
+		)
+		nodeC, wayC, relationC, err := counter.Run()
+		if err != nil {
+			p.Error = err
+			return
+		}
+		p.Logger.Info(nodeC, wayC, relationC)
+		totalElement := nodeC + wayC + relationC
+
 		// reader .
 		reader, err := os.Open(p.Args.PBFFile)
 		if err != nil {
@@ -80,74 +93,81 @@ func (p *pbfParser) Iterator() <-chan Element {
 		p.PBFMasks = bitmask.NewPBFMasks()
 
 		// Index
-		indexer := newPBFIndexer(p.Args.PBFFile, p.PBFMasks)
+		indexerBar := newBar(totalElement, "Indexing")
+		indexer := newPBFIndexer(p.Args.PBFFile, p.PBFMasks, indexerBar)
 		if err := indexer.Run(); err != nil {
 			p.Error = err
 			return
 		}
 		// Relation member indexer
-		relationMemberIndexer := newPBFRelationMemberIndexer(p.Args.PBFFile, p.PBFMasks)
+		relationMemberIndexerBar := newBar(totalElement, "RM Indexering")
+		relationMemberIndexer := newPBFRelationMemberIndexer(p.Args.PBFFile, p.PBFMasks, relationMemberIndexerBar)
 		if err := relationMemberIndexer.Run(); err != nil {
 			p.Error = err
 			return
 		}
-
 		p.Logger.Info("Finish index")
 
-		// FirstRound
+		// InsertDB
 		// Put way refs, relation member into db.
 		p.Batch = leveldb.MakeBatch(p.Args.BatchSize)
 		defer p.Batch.Reset()
 
 		p.elementChan = make(chan Element)
 
-		firstRoundWg := sync.WaitGroup{}
-		firstRoundWg.Add(1)
+		insertDBWg := sync.WaitGroup{}
+		insertDBWg.Add(1)
+		insertDBBar := newBar(totalElement, "InsertDB")
 		go func() {
-			defer firstRoundWg.Done()
+			defer insertDBWg.Done()
+			defer insertDBBar.Finish()
 			idx := 0
 			for emt := range p.elementChan {
-				idx++
-				// Check batch size every batchsize.
-				if idx%p.Args.BatchSize == 0 {
-					if err := p.checkBatch(); err != nil {
-						p.Error = err
-					}
-				}
-				switch emt.Type {
-				case 0:
-					if p.PBFMasks.WayRefs.Has(emt.Node.ID) || p.PBFMasks.RelNodes.Has(emt.Node.ID) {
-						id, b := nodeToBytes(emt.Node)
-						p.Batch.Put(
-							[]byte(id),
-							b,
-						)
-					}
-				case 1:
-					if p.PBFMasks.RelWays.Has(emt.Way.ID) {
-						emtBytes, err := emt.ToBytes()
-						if err != nil {
-							p.Report.FatalWay++
-							continue
+				func() {
+					defer insertDBBar.Increment()
+					idx++
+					// Check batch size every batchsize.
+					if idx%p.Args.BatchSize == 0 {
+						if err := p.checkBatch(); err != nil {
+							p.Error = err
 						}
-						p.Batch.Put(
-							[]byte("W"+strconv.FormatInt(emt.Way.ID, 10)),
-							emtBytes,
-						)
 					}
-				case 2:
-					if p.PBFMasks.RelRelation.Has(emt.Relation.ID) {
-						emtBytes, err := emt.ToBytes()
-						if err != nil {
-							p.Report.FatalRelation++
-							continue
+					switch emt.Type {
+					case 0:
+						if p.PBFMasks.WayRefs.Has(emt.Node.ID) || p.PBFMasks.RelNodes.Has(emt.Node.ID) {
+							id, b := nodeToBytes(emt.Node)
+							p.Batch.Put(
+								[]byte(id),
+								b,
+							)
 						}
-						p.Batch.Put(
-							[]byte("R"+strconv.FormatInt(emt.Relation.ID, 10)),
-							emtBytes,
-						)
+					case 1:
+						if p.PBFMasks.RelWays.Has(emt.Way.ID) {
+							emtBytes, err := emt.ToBytes()
+							if err != nil {
+								p.Report.FatalWay++
+								return
+							}
+							p.Batch.Put(
+								[]byte("W"+strconv.FormatInt(emt.Way.ID, 10)),
+								emtBytes,
+							)
+						}
+					case 2:
+						if p.PBFMasks.RelRelation.Has(emt.Relation.ID) {
+							emtBytes, err := emt.ToBytes()
+							if err != nil {
+								p.Report.FatalRelation++
+								return
+							}
+							p.Batch.Put(
+								[]byte("R"+strconv.FormatInt(emt.Relation.ID, 10)),
+								emtBytes,
+							)
+						}
 					}
-				}
+
+				}()
 			}
 		}()
 
@@ -157,14 +177,14 @@ func (p *pbfParser) Iterator() <-chan Element {
 			return
 		}
 		close(p.elementChan)
-		firstRoundWg.Wait()
+		insertDBWg.Wait()
 
 		// Flush batch.
 		if err := p.flushBatch(true); err != nil {
 			p.Error = err
 			return
 		}
-		p.Logger.Info("Finish first round")
+		p.Logger.Info("Finish insert db")
 
 		// Rewind pbf file reader
 		if _, err := reader.Seek(0, io.SeekStart); err != nil {
@@ -173,46 +193,54 @@ func (p *pbfParser) Iterator() <-chan Element {
 		}
 
 		// Final round.
+		// Output element
+
 		// Re-init element chan
 		p.elementChan = make(chan Element)
 
-		finalRoundWg := sync.WaitGroup{}
-		finalRoundWg.Add(1)
+		finalRWg := sync.WaitGroup{}
+		finalRWg.Add(1)
+		finalRBar := newBar(totalElement, "Output")
 		go func() {
-			defer finalRoundWg.Done()
+			defer finalRWg.Done()
+			defer finalRBar.Finish()
 			for emt := range p.elementChan {
-				switch emt.Type {
-				case 0:
-					if p.PBFMasks.Nodes.Has(emt.Node.ID) {
-						p.Report.ProcessedNode++
-						outputCh <- emt
-					}
-				case 1:
-					if p.PBFMasks.Ways.Has(emt.Way.ID) {
-						emts, err := p.dbLookupWayEmts(&emt.Way)
-						if err != nil {
-							p.Logger.Warning(err)
-							p.Report.FatalWay++
-							continue
+				func() {
+					defer finalRBar.Increment()
+					switch emt.Type {
+					case 0:
+						if p.PBFMasks.Nodes.Has(emt.Node.ID) {
+							p.Report.ProcessedNode++
+							outputCh <- emt
 						}
-						emt.Elements = emts
-						p.Report.ProcessedWay++
-						outputCh <- emt
+					case 1:
+						if p.PBFMasks.Ways.Has(emt.Way.ID) {
+							emts, err := p.dbLookupWayEmts(&emt.Way)
+							if err != nil {
+								p.Logger.Warning(err)
+								p.Report.FatalWay++
+								return
+							}
+							emt.Elements = emts
+							p.Report.ProcessedWay++
+							outputCh <- emt
+						}
+
+					case 2:
+						if p.PBFMasks.Relations.Has(emt.Relation.ID) {
+							emts, err := p.dbLookupRelationEmts(&emt.Relation, []int64{})
+							if err != nil {
+								// p.Logger.Warning(err)
+								p.Report.FatalRelation++
+								return
+							}
+							emt.Elements = emts
+							p.Report.ProcessedRelation++
+							outputCh <- emt
+						}
 					}
 
-				case 2:
-					if p.PBFMasks.Relations.Has(emt.Relation.ID) {
-						emts, err := p.dbLookupRelationEmts(&emt.Relation, []int64{})
-						if err != nil {
-							// p.Logger.Warning(err)
-							p.Report.FatalRelation++
-							continue
-						}
-						emt.Elements = emts
-						p.Report.ProcessedRelation++
-						outputCh <- emt
-					}
-				}
+				}()
 			}
 		}()
 		decoder := gosmparse.NewDecoder(reader)
@@ -221,7 +249,7 @@ func (p *pbfParser) Iterator() <-chan Element {
 			return
 		}
 		close(p.elementChan)
-		finalRoundWg.Wait()
+		finalRWg.Wait()
 
 		// Report
 		p.Report.SpendTime = time.Since(st)

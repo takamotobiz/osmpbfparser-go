@@ -1,6 +1,7 @@
 package osmpbfparser
 
 import (
+	"github.com/cheggaaa/pb/v3"
 	"github.com/jneo8/osmpbfparser-go/bitmask"
 	"github.com/thomersch/gosmparse"
 	"os"
@@ -10,6 +11,7 @@ import (
 type PBFIndexer struct {
 	PBFFile  string
 	PBFMasks *bitmask.PBFMasks
+	Bar      *pb.ProgressBar
 }
 
 // Run ...
@@ -20,6 +22,8 @@ func (p *PBFIndexer) Run() error {
 	}
 	defer reader.Close()
 
+	defer p.Bar.Finish()
+
 	decoder := gosmparse.NewDecoder(reader)
 	if err := decoder.Parse(p); err != nil {
 		return err
@@ -29,6 +33,7 @@ func (p *PBFIndexer) Run() error {
 
 // ReadNode ...
 func (p *PBFIndexer) ReadNode(node gosmparse.Node) {
+	defer p.Bar.Increment()
 	// Get node if tags > 0
 	if len(node.Tags) == 0 {
 		return
@@ -38,6 +43,7 @@ func (p *PBFIndexer) ReadNode(node gosmparse.Node) {
 
 // ReadWay ...
 func (p *PBFIndexer) ReadWay(way gosmparse.Way) {
+	defer p.Bar.Increment()
 	if len(way.Tags) == 0 {
 		return
 	}
@@ -49,6 +55,7 @@ func (p *PBFIndexer) ReadWay(way gosmparse.Way) {
 
 // ReadRelation ...
 func (p *PBFIndexer) ReadRelation(relation gosmparse.Relation) {
+	defer p.Bar.Increment()
 	if len(relation.Tags) == 0 {
 		return
 	}

@@ -1,6 +1,7 @@
 package osmpbfparser
 
 import (
+	"github.com/cheggaaa/pb/v3"
 	"github.com/jneo8/osmpbfparser-go/bitmask"
 	"github.com/thomersch/gosmparse"
 	"os"
@@ -10,10 +11,12 @@ import (
 type PBFRelationMemberIndexer struct {
 	PBFFile  string
 	PBFMasks *bitmask.PBFMasks
+	Bar      *pb.ProgressBar
 }
 
 // Run ...
 func (p *PBFRelationMemberIndexer) Run() error {
+	defer p.Bar.Finish()
 	reader, err := os.Open(p.PBFFile)
 	if err != nil {
 		return err
@@ -28,10 +31,13 @@ func (p *PBFRelationMemberIndexer) Run() error {
 }
 
 // ReadNode ...
-func (p *PBFRelationMemberIndexer) ReadNode(node gosmparse.Node) {}
+func (p *PBFRelationMemberIndexer) ReadNode(node gosmparse.Node) {
+	defer p.Bar.Increment()
+}
 
 // ReadWay ...
 func (p *PBFRelationMemberIndexer) ReadWay(way gosmparse.Way) {
+	defer p.Bar.Increment()
 	if p.PBFMasks.RelWays.Has(way.ID) {
 		for _, nodeID := range way.NodeIDs {
 			p.PBFMasks.RelNodes.Insert(nodeID)
@@ -40,4 +46,6 @@ func (p *PBFRelationMemberIndexer) ReadWay(way gosmparse.Way) {
 }
 
 // ReadRelation ...
-func (p *PBFRelationMemberIndexer) ReadRelation(relation gosmparse.Relation) {}
+func (p *PBFRelationMemberIndexer) ReadRelation(relation gosmparse.Relation) {
+	defer p.Bar.Increment()
+}
