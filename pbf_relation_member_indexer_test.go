@@ -6,22 +6,36 @@ import (
 )
 
 func TestPBFRelationMemberIndexer(t *testing.T) {
+
 	masks := bitmask.NewPBFMasks()
+	pb, wg := newProgress(6)
+
 	indexer := newPBFIndexer(
 		"./assert/test.pbf",
 		masks,
-		newBar(1166412, "Indexer"),
+		addBar(pb, "IndexerNode", 1115337),
+		addBar(pb, "IndexerWay", 50832),
+		addBar(pb, "IndexerRelation", 243),
 	)
 	if err := indexer.Run(); err != nil {
 		t.Error(err)
 	}
+	wg.Done()
+	wg.Done()
+	wg.Done()
 
 	rmIndexer := newPBFRelationMemberIndexer(
 		"./assert/test.pbf",
 		masks,
-		newBar(1166412, "RM Indexer"),
+		addBar(pb, "IndexerNode", 1115337),
+		addBar(pb, "IndexerWay", 50832),
+		addBar(pb, "IndexerRelation", 243),
 	)
 	if err := rmIndexer.Run(); err != nil {
 		t.Error(err)
 	}
+	wg.Done()
+	wg.Done()
+	wg.Done()
+	pb.Wait()
 }

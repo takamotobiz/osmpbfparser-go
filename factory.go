@@ -1,9 +1,9 @@
 package osmpbfparser
 
 import (
-	"github.com/cheggaaa/pb/v3"
 	"github.com/jneo8/logger-go"
 	"github.com/jneo8/osmpbfparser-go/bitmask"
+	"github.com/vbauerster/mpb/v5"
 )
 
 // New ...
@@ -20,24 +20,32 @@ func New(
 func newPBFIndexer(
 	pbfFile string,
 	pbfMasks *bitmask.PBFMasks,
-	bar *pb.ProgressBar,
+	nodeBar *mpb.Bar,
+	wayBar *mpb.Bar,
+	relationBar *mpb.Bar,
 ) pbfDataParser {
 	return &PBFIndexer{
-		PBFFile:  pbfFile,
-		PBFMasks: pbfMasks,
-		Bar:      bar,
+		PBFFile:     pbfFile,
+		PBFMasks:    pbfMasks,
+		NodeBar:     nodeBar,
+		WayBar:      wayBar,
+		RelationBar: relationBar,
 	}
 }
 
 func newPBFRelationMemberIndexer(
 	pbfFile string,
 	pbfMasks *bitmask.PBFMasks,
-	bar *pb.ProgressBar,
+	nodeBar *mpb.Bar,
+	wayBar *mpb.Bar,
+	relationBar *mpb.Bar,
 ) pbfDataParser {
 	return &PBFRelationMemberIndexer{
-		PBFFile:  pbfFile,
-		PBFMasks: pbfMasks,
-		Bar:      bar,
+		PBFFile:     pbfFile,
+		PBFMasks:    pbfMasks,
+		NodeBar:     nodeBar,
+		WayBar:      wayBar,
+		RelationBar: relationBar,
 	}
 }
 
