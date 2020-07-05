@@ -10,6 +10,7 @@ require (
 	github.com/syndtr/goleveldb v1.0.1-0.20190923125748-758128399b1d
 	github.com/thomersch/gosmparse v0.0.0-20190428115224-6be706b995b9
 	github.com/tmthrgd/go-popcount v0.0.0-20190904054823-afb1ace8b04f
+	github.com/vbauerster/mpb/v5 v5.2.2
 	golang.org/x/sys v0.0.0-20200622214017-ed371f2e16b4 // indirect
 	gopkg.in/VividCortex/ewma.v1 v1.1.1 // indirect
 	gopkg.in/cheggaaa/pb.v2 v2.0.7 // indirect
