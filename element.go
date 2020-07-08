@@ -6,7 +6,7 @@ import (
 	"github.com/thomersch/gosmparse"
 )
 
-// Element ...
+// Element is an osm data element group set.
 type Element struct {
 	Type     int // 0=Node, 1=Way. 2=Relation
 	Node     gosmparse.Node
@@ -26,7 +26,7 @@ func (e *Element) ToBytes() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// BytesToElement ...
+// BytesToElement convert bytes to Element struct.
 func BytesToElement(b []byte) (Element, error) {
 	decoder := gob.NewDecoder(bytes.NewReader(b))
 	var element Element

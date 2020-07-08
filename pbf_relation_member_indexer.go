@@ -7,7 +7,8 @@ import (
 	"os"
 )
 
-// PBFRelationMemberIndexer ...
+// PBFRelationMemberIndexer same as PBFIndexer but run after PBFIndxeer.
+// Mark relation's member element to mask.
 type PBFRelationMemberIndexer struct {
 	PBFFile     string
 	PBFMasks    *bitmask.PBFMasks
@@ -16,7 +17,7 @@ type PBFRelationMemberIndexer struct {
 	RelationBar *mpb.Bar
 }
 
-// Run ...
+// Run exec func.
 func (p *PBFRelationMemberIndexer) Run() error {
 	reader, err := os.Open(p.PBFFile)
 	if err != nil {
@@ -31,12 +32,12 @@ func (p *PBFRelationMemberIndexer) Run() error {
 	return nil
 }
 
-// ReadNode ...
+// ReadNode for gosmparse OSMReader interface.
 func (p *PBFRelationMemberIndexer) ReadNode(node gosmparse.Node) {
 	defer p.NodeBar.Increment()
 }
 
-// ReadWay ...
+// ReadWay for gosmparse OSMReader interface.
 func (p *PBFRelationMemberIndexer) ReadWay(way gosmparse.Way) {
 	defer p.WayBar.Increment()
 	if p.PBFMasks.RelWays.Has(way.ID) {
@@ -46,7 +47,7 @@ func (p *PBFRelationMemberIndexer) ReadWay(way gosmparse.Way) {
 	}
 }
 
-// ReadRelation ...
+// ReadRelation for gosmparse OSMReader interface.
 func (p *PBFRelationMemberIndexer) ReadRelation(relation gosmparse.Relation) {
 	defer p.RelationBar.Increment()
 }

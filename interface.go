@@ -5,7 +5,7 @@ import (
 	"github.com/thomersch/gosmparse"
 )
 
-// PBFParser ...
+// PBFParser is a item parse pbf file, iterator return.
 type PBFParser interface {
 	Iterator() <-chan Element
 	SetLogger(*log.Logger)
@@ -21,9 +21,4 @@ type pbfDataParser interface {
 type pbfDataCounter interface {
 	gosmparse.OSMReader
 	Run() (nodeCount int, wayCount int, relationCount int, err error)
-}
-
-// Reader ...
-type Reader interface {
-	Run(emt Element)
 }

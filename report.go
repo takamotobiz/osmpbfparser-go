@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// Report ...
+// Report recor the information duration the runtime.
 type Report struct {
 	PBFFile           string
 	Fizesize          int64
@@ -17,7 +17,7 @@ type Report struct {
 	FatalWay          int
 }
 
-// GetReport ...
+// GetReport return report string.
 func (r *Report) GetReport() string {
 	return fmt.Sprintf(
 		`

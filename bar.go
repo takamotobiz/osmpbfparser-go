@@ -6,6 +6,7 @@ import (
 	"sync"
 )
 
+// newProgress return new mpb progress with input total.
 func newProgress(n int) (*mpb.Progress, *sync.WaitGroup) {
 	var wg sync.WaitGroup
 	wg.Add(n)
@@ -17,16 +18,14 @@ func addBar(pb *mpb.Progress, name string, total int) *mpb.Bar {
 		int64(total),
 		mpb.BarStyle("╢▌▌░╟"),
 		mpb.PrependDecorators(
-			decor.Name(name, decor.WC{W: len(name) + 1, C: decor.DidentRight}),
+			decor.Name(name, decor.WC{W: 20, C: decor.DidentRight}),
 		),
 		mpb.AppendDecorators(
-			// decor.OnComplete(
-			// 	decor.AverageETA(decor.ET_STYLE_GO, decor.WC{W: 5, C: decor.DidentRight}),
-			// 	"done",
-			// ),
-			// decor.Counters(1, "% d / % d", decor.WC{W: 5, C: decor.DidentRight}),
-			decor.CountersNoUnit("%d / %d ", decor.WCSyncWidth),
-
+			decor.CountersNoUnit("%d/%d ", decor.WCSyncWidth),
+			decor.OnComplete(
+				decor.AverageETA(decor.ET_STYLE_GO, decor.WCSyncSpaceR),
+				"done",
+			),
 			decor.Percentage(),
 		),
 	)

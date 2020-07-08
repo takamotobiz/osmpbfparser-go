@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-// PBFIndexer ...
+// PBFIndexer parser pbffile and mark if this element is needed, save to PBFMasks.
 type PBFIndexer struct {
 	PBFFile     string
 	PBFMasks    *bitmask.PBFMasks
@@ -16,7 +16,7 @@ type PBFIndexer struct {
 	RelationBar *mpb.Bar
 }
 
-// Run ...
+// Run exec func.
 func (p *PBFIndexer) Run() error {
 	reader, err := os.Open(p.PBFFile)
 	if err != nil {
@@ -31,7 +31,7 @@ func (p *PBFIndexer) Run() error {
 	return nil
 }
 
-// ReadNode ...
+// ReadNode for gosmparse OSMReader interface.
 func (p *PBFIndexer) ReadNode(node gosmparse.Node) {
 	defer p.NodeBar.Increment()
 	// Get node if tags > 0
@@ -41,7 +41,7 @@ func (p *PBFIndexer) ReadNode(node gosmparse.Node) {
 	p.PBFMasks.Nodes.Insert(node.ID)
 }
 
-// ReadWay ...
+// ReadWay for gosmparse OSMReader interface.
 func (p *PBFIndexer) ReadWay(way gosmparse.Way) {
 	defer p.WayBar.Increment()
 	if len(way.Tags) == 0 {
@@ -53,7 +53,7 @@ func (p *PBFIndexer) ReadWay(way gosmparse.Way) {
 	}
 }
 
-// ReadRelation ...
+// ReadRelation for gosmparse OSMReader interface.
 func (p *PBFIndexer) ReadRelation(relation gosmparse.Relation) {
 	defer p.RelationBar.Increment()
 	if len(relation.Tags) == 0 {

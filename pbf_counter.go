@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-// PBFCounter ...
+// PBFCounter count the number of each type data element and return the number.
 type PBFCounter struct {
 	PBFFile       string
 	NodeCount     int
@@ -17,7 +17,7 @@ type PBFCounter struct {
 	relationMux   sync.Mutex
 }
 
-// Run ...
+// Run exec func for PBFCounter.
 func (p *PBFCounter) Run() (int, int, int, error) {
 	reader, err := os.Open(p.PBFFile)
 	if err != nil {
@@ -32,21 +32,21 @@ func (p *PBFCounter) Run() (int, int, int, error) {
 	return p.NodeCount, p.WayCount, p.RelationCount, nil
 }
 
-// ReadNode ...
+// ReadNode for gosmparse OSMReader interface.
 func (p *PBFCounter) ReadNode(node gosmparse.Node) {
 	p.nodeMux.Lock()
 	p.NodeCount++
 	p.nodeMux.Unlock()
 }
 
-// ReadWay ...
+// ReadWay for gosmparse OSMReader interface.
 func (p *PBFCounter) ReadWay(way gosmparse.Way) {
 	p.wayMux.Lock()
 	p.WayCount++
 	p.wayMux.Unlock()
 }
 
-// ReadRelation ...
+// ReadRelation for gosmparse OSMReader interface.
 func (p *PBFCounter) ReadRelation(relation gosmparse.Relation) {
 	p.relationMux.Lock()
 	p.RelationCount++

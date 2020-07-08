@@ -6,7 +6,7 @@ import (
 	"github.com/vbauerster/mpb/v5"
 )
 
-// New ...
+// New return new PBFParser.
 func New(
 	args Args,
 ) PBFParser {

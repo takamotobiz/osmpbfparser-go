@@ -161,7 +161,7 @@ func (p *pbfParser) Iterator() <-chan Element {
 	return p.OutputCh
 }
 
-// ReadNode ...
+// ReadNode for gosmparse OSMReader interface.
 func (p *pbfParser) ReadNode(node gosmparse.Node) {
 	p.elementCh <- Element{
 		Type: 0,
@@ -169,7 +169,7 @@ func (p *pbfParser) ReadNode(node gosmparse.Node) {
 	}
 }
 
-// ReadWay ...
+// ReadWay for gosmparse OSMReader interface.
 func (p *pbfParser) ReadWay(way gosmparse.Way) {
 	p.elementCh <- Element{
 		Type: 1,
@@ -177,7 +177,7 @@ func (p *pbfParser) ReadWay(way gosmparse.Way) {
 	}
 }
 
-// ReadRelation ...
+// ReadRelation for gosmparse OSMReader interface.
 func (p *pbfParser) ReadRelation(relation gosmparse.Relation) {
 	p.elementCh <- Element{
 		Type:     2,

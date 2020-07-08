@@ -8,6 +8,7 @@ import (
 	"strconv"
 )
 
+// nodeToBytes convert node struct to bytes.
 func nodeToBytes(n gosmparse.Node) (string, []byte) {
 	var buf bytes.Buffer
 
@@ -22,6 +23,7 @@ func nodeToBytes(n gosmparse.Node) (string, []byte) {
 	return strconv.FormatInt(n.ID, 10), buf.Bytes()
 }
 
+// bytesToNode convert bytes to node struct.
 func bytesToNode(b []byte) gosmparse.Node {
 	node := gosmparse.Node{}
 
