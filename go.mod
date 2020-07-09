@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	github.com/jneo8/logger-go v0.0.0-20200624170246-064520bcdd93
+	github.com/paulmach/go.geojson v1.4.0
 	github.com/sirupsen/logrus v1.6.0
 	github.com/syndtr/goleveldb v1.0.1-0.20190923125748-758128399b1d
 	github.com/thomersch/gosmparse v0.0.0-20190428115224-6be706b995b9
