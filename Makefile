@@ -47,6 +47,9 @@ test:  ## Run test
 		fi; \
 	done
 
+integration-test:  ## Run intergration test
+	$(MAKE) TESTTAGS=integration test
+
 ##@ lint
 .PHONY: linter-run install-lint
 
