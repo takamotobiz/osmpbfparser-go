@@ -36,12 +36,31 @@ func (e *Element) ToBytes() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// IsArea return if element is area or not.
+// https://wiki.openstreetmap.org/wiki/Key:area
+func (e *Element) IsArea() bool {
+	var isPolygon bool
+	if val, ok := e.Way.Tags["area"]; ok && val == "yes" {
+		// This list is probably incomplete - please add other cases
+		if _, ok := e.Way.Tags["highway"]; ok {
+			// highway=*, see 'Highway areas' below for more details
+		} else if _, isBarrier := e.Way.Tags["barrier"]; isBarrier {
+			// barrier=*, for thicker hedges or walls or detailed mapping defined using an area add area=yes
+		} else {
+			isPolygon = true
+		}
+	}
+	return isPolygon
+}
+
 // ToGeoJSON convery element to JSON bytes.
 func (e *Element) ToGeoJSON() []byte {
 	var b []byte
 	switch e.Type {
 	case 0:
 		b = e.nodeToJSON()
+	case 1:
+		b = e.wayToJSON()
 	}
 	return b
 }
@@ -51,6 +70,40 @@ func (e *Element) nodeToJSON() []byte {
 	fc.AddFeature(e.NodeToFeature())
 	rawJSON, _ := fc.MarshalJSON()
 	return rawJSON
+}
+
+func (e *Element) wayToJSON() []byte {
+	fc := geojson.NewFeatureCollection()
+	fc.AddFeature(e.NodeToFeature())
+	rawJSON, _ := fc.MarshalJSON()
+	return rawJSON
+}
+
+// WayToJSON convert way element to geojson feature.
+func (e *Element) WayToJSON() *geojson.Feature {
+	latLngs := [][]float64{}
+	for _, member := range e.Elements {
+		latLngs = append(latLngs, []float64{member.Node.Lon, member.Node.Lat})
+	}
+
+	var f *geojson.Feature
+
+	switch e.IsArea() {
+	case true:
+		f = geojson.NewPolygonFeature([][][]float64{latLngs})
+	default:
+		f = geojson.NewLineStringFeature(latLngs)
+	}
+
+	wayID := "way" + "/" + strconv.FormatInt(e.Way.ID, 10)
+	f.ID = wayID
+	f.SetProperty("osmid", wayID)
+	f.SetProperty("osmType", "way")
+
+	for k, v := range e.Way.Tags {
+		f.SetProperty(k, v)
+	}
+	return f
 }
 
 // NodeToFeature convert node element to geojson feature.
