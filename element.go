@@ -3,9 +3,7 @@ package osmpbfparser
 import (
 	"bytes"
 	"encoding/gob"
-	"github.com/paulmach/go.geojson"
 	"github.com/thomersch/gosmparse"
-	"strconv"
 )
 
 // BytesToElement convert bytes to Element struct.
@@ -36,6 +34,20 @@ func (e *Element) ToBytes() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// GetID return ID.
+func (e *Element) GetID() int64 {
+	var id int64
+	switch e.Type {
+	case 0:
+		id = e.Node.ID
+	case 1:
+		id = e.Way.ID
+	case 2:
+		id = e.Relation.ID
+	}
+	return id
+}
+
 // IsArea return if element is area or not.
 // https://wiki.openstreetmap.org/wiki/Key:area
 func (e *Element) IsArea() bool {
@@ -51,72 +63,4 @@ func (e *Element) IsArea() bool {
 		}
 	}
 	return isPolygon
-}
-
-// ToGeoJSON convery element to JSON bytes.
-func (e *Element) ToGeoJSON() []byte {
-	var b []byte
-	switch e.Type {
-	case 0:
-		b = e.nodeToJSON()
-	case 1:
-		b = e.wayToJSON()
-	}
-	return b
-}
-
-func (e *Element) nodeToJSON() []byte {
-	fc := geojson.NewFeatureCollection()
-	fc.AddFeature(e.NodeToFeature())
-	rawJSON, _ := fc.MarshalJSON()
-	return rawJSON
-}
-
-func (e *Element) wayToJSON() []byte {
-	fc := geojson.NewFeatureCollection()
-	fc.AddFeature(e.NodeToFeature())
-	rawJSON, _ := fc.MarshalJSON()
-	return rawJSON
-}
-
-// WayToJSON convert way element to geojson feature.
-func (e *Element) WayToJSON() *geojson.Feature {
-	latLngs := [][]float64{}
-	for _, member := range e.Elements {
-		latLngs = append(latLngs, []float64{member.Node.Lon, member.Node.Lat})
-	}
-
-	var f *geojson.Feature
-
-	switch e.IsArea() {
-	case true:
-		f = geojson.NewPolygonFeature([][][]float64{latLngs})
-	default:
-		f = geojson.NewLineStringFeature(latLngs)
-	}
-
-	wayID := "way" + "/" + strconv.FormatInt(e.Way.ID, 10)
-	f.ID = wayID
-	f.SetProperty("osmid", wayID)
-	f.SetProperty("osmType", "way")
-
-	for k, v := range e.Way.Tags {
-		f.SetProperty(k, v)
-	}
-	return f
-}
-
-// NodeToFeature convert node element to geojson feature.
-func (e *Element) NodeToFeature() *geojson.Feature {
-	f := geojson.NewPointFeature([]float64{e.Node.Lon, e.Node.Lat})
-
-	nodeID := "node/" + strconv.FormatInt(e.Node.ID, 10)
-	f.ID = nodeID
-	f.SetProperty("osmid", nodeID)
-	f.SetProperty("osmType", "node")
-
-	for k, v := range e.Node.Tags {
-		f.SetProperty(k, v)
-	}
-	return f
 }

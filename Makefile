@@ -50,6 +50,9 @@ test:  ## Run test
 integration-test:  ## Run intergration test
 	$(MAKE) TESTTAGS=integration test
 
+integration-geojson-test:  ## Run geojson intergration test
+	$(MAKE) TESTTAGS=geojson_integration test
+
 ##@ lint
 .PHONY: linter-run install-lint
 
