@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/jneo8/osmpbfparser-go"
 	"log"
 )
@@ -8,14 +9,18 @@ import (
 func main() {
 	parser := osmpbfparser.New(
 		osmpbfparser.Args{
-			PBFFile:     "./assert/test.pbf",
+			PBFFile:     "./assert/taiwan-latest.osm.pbf",
 			LevelDBPath: "/tmp/osmpbfparser",
 			BatchSize:   10000,
 		},
 	)
 
-	for range parser.Iterator() {
-		// fmt.Println(emt)
+	for emt := range parser.Iterator() {
+		rawJSON, err := emt.ToGeoJSON()
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(string(rawJSON))
 	}
 	if err := parser.Err(); err != nil {
 		log.Fatal(err)
