@@ -10,7 +10,7 @@ import (
 func TestPBFParser(t *testing.T) {
 	parser := New(
 		Args{
-			PBFFile:     "./assert/test.pbf",
+			PBFFile:     "./static/test.pbf",
 			LevelDBPath: "/tmp/osmpbfparser",
 			BatchSize:   10000,
 		},

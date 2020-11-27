@@ -66,7 +66,7 @@ linter-run:  ## Run linter for all
 .PHONY: download-pbf
 
 downloasd-pbf:  ## (ZONE=asia/taiwan) Download osm pbf file. Use ZONE variable to control which area to download. See https://download.geofabrik.de/
-	wget http://download.geofabrik.de/${ZONE}-latest.osm.pbf -P ./assert
+	wget http://download.geofabrik.de/${ZONE}-latest.osm.pbf -P ./static
 
 
 ##@ Help

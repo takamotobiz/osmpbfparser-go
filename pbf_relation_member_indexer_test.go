@@ -13,7 +13,7 @@ func TestPBFRelationMemberIndexer(t *testing.T) {
 	pb, wg := newProgress(6)
 
 	indexer := newPBFIndexer(
-		"./assert/test.pbf",
+		"./static/test.pbf",
 		masks,
 		addBar(pb, "IndexerNode", 1115337),
 		addBar(pb, "IndexerWay", 50832),
@@ -27,7 +27,7 @@ func TestPBFRelationMemberIndexer(t *testing.T) {
 	wg.Done()
 
 	rmIndexer := newPBFRelationMemberIndexer(
-		"./assert/test.pbf",
+		"./static/test.pbf",
 		masks,
 		addBar(pb, "IndexerNode", 1115337),
 		addBar(pb, "IndexerWay", 50832),

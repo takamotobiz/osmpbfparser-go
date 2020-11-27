@@ -14,7 +14,7 @@ func TestPBFIndexer(t *testing.T) {
 	wg.Add(3)
 	pb := mpb.New(mpb.WithWaitGroup(&wg))
 	indexer := newPBFIndexer(
-		"./assert/test.pbf",
+		"./static/test.pbf",
 		bitmask.NewPBFMasks(),
 		pb.AddBar(int64(1115337)),
 		pb.AddBar(int64(50832)),

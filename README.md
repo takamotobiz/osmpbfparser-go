@@ -33,7 +33,7 @@ import (
 func main() {
 	parser := osmpbfparser.New(
 		osmpbfparser.Args{
-			PBFFile:     "./assert/test.pbf",
+			PBFFile:     "./static/test.pbf",
 			LevelDBPath: "/tmp/osmpbfparser",
 			BatchSize:   10000,
 		},
