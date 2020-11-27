@@ -19,35 +19,7 @@ go get -u https://github.com/jneo8/osmpbfparser-go
 
 ## Quick start
 
-- **Download the pbf file**
-
-```go
-package main
-
-import (
-	"fmt"
-	"github.com/jneo8/osmpbfparser-go"
-	"log"
-)
-
-func main() {
-	parser := osmpbfparser.New(
-		osmpbfparser.Args{
-			PBFFile:     "./static/test.pbf",
-			LevelDBPath: "/tmp/osmpbfparser",
-			BatchSize:   10000,
-		},
-	)
-
-	for emt := range parser.Iterator() {
-		rawJSON, err := emt.ToGeoJSON()
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println(string(rawJSON))
-	}
-	if err := parser.Err(); err != nil {
-		log.Fatal(err)
-	}
-}
+```bash
+# This will run the example code in ./cmd/example/main.go
+make run-example
 ```
