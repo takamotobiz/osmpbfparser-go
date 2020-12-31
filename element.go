@@ -3,6 +3,7 @@ package osmpbfparser
 import (
 	"bytes"
 	"encoding/gob"
+	"fmt"
 	"github.com/thomersch/gosmparse"
 )
 
@@ -76,4 +77,13 @@ func (e *Element) GetTags() map[string]string {
 		return e.Relation.Tags
 	}
 	return make(map[string]string)
+}
+
+// GetName from tags.
+func (e *Element) GetName() (string, error) {
+	tags := e.GetTags()
+	if v, ok := tags["name"]; ok {
+		return v, nil
+	}
+	return "", fmt.Errorf("No name tag")
 }
