@@ -64,3 +64,16 @@ func (e *Element) IsArea() bool {
 	}
 	return isPolygon
 }
+
+// GetTags ...
+func (e *Element) GetTags() map[string]string {
+	switch e.Type {
+	case 0:
+		return e.Node.Tags
+	case 1:
+		return e.Way.Tags
+	case 2:
+		return e.Relation.Tags
+	}
+	return make(map[string]string)
+}
