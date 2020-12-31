@@ -1,3 +1,9 @@
+## v1.2.0 (2020-12-31)
+
+### Feat
+
+- **element.go**: New func element.GetName()
+
 ## v1.1.0 (2020-12-31)
 
 ### Feat
