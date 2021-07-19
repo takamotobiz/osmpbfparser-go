@@ -49,7 +49,7 @@ func main() {
 				if err != nil {
 					log.Fatal(err)
 				}
-				_, err = file.Write([]byte("\n"))
+				_, err = file.Write([]byte(",\n"))
 				if err != nil {
 					log.Fatal(err)
 				}
