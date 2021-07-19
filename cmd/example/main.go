@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
+	"time"
 
 	"github.com/jneo8/osmpbfparser-go"
 )
@@ -16,6 +18,18 @@ func main() {
 		},
 	)
 	var nc, wc, rc uint64
+	// ファイルを書き込み用にオープン (mode=0666)
+	file, err := os.Create("./output.json")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	str := "Start:"
+	str += time.Now().Format("2006-01-02 15:04:05")
+	str += "\n"
+	file.WriteString(str)
+	fmt.Println(str)
 
 	for emt := range parser.Iterator() {
 		// rawJSON, err := emt.ToGeoJSON()
@@ -31,7 +45,14 @@ func main() {
 				if err != nil {
 					log.Fatal(err)
 				}
-				fmt.Println(string(rawJSON))
+				_, err = file.Write([]byte(rawJSON))
+				if err != nil {
+					log.Fatal(err)
+				}
+				_, err = file.Write([]byte("\n"))
+				if err != nil {
+					log.Fatal(err)
+				}
 				switch emt.Type {
 				case 0: //Node
 					nc++
@@ -44,6 +65,12 @@ func main() {
 		}
 	}
 	fmt.Printf("Nodes: %d, Ways: %d, Relations: %d\n", nc, wc, rc)
+
+	str1 := "End:"
+	str1 += time.Now().Format("2006-01-02 15:04:05")
+	str1 += "\n"
+	file.WriteString(str1)
+	fmt.Println(str1)
 
 	if err := parser.Err(); err != nil {
 		log.Fatal(err)
