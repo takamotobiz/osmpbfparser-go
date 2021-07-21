@@ -1,19 +1,21 @@
 package osmpbfparser
 
 import (
-	"github.com/paulmach/go.geojson"
 	"reflect"
 	"strconv"
+
+	geojson "github.com/paulmach/go.geojson"
 )
 
 // ToGeoJSON convery element to JSON bytes.
 func (e *Element) ToGeoJSON() ([]byte, error) {
 	switch e.Type {
 	}
-	fc := geojson.NewFeatureCollection()
+	// fc := geojson.NewFeatureCollection()
 	f := e.ToGeoJSONFeature()
-	fc.AddFeature(f)
-	rawJSON, err := fc.MarshalJSON()
+	// fc.AddFeature(f)
+	// rawJSON, err := fc.MarshalJSON()
+	rawJSON, err := f.MarshalJSON()
 	return rawJSON, err
 }
 

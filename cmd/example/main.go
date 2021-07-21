@@ -28,9 +28,11 @@ func main() {
 	str := "Start:"
 	str += time.Now().Format("2006-01-02 15:04:05")
 	str += "\n"
-	file.WriteString(str)
 	fmt.Println(str)
 
+	file.WriteString("{\"type\":\"FeatureCollection\",\"features\":[\n")
+
+	var fi bool = true
 	for emt := range parser.Iterator() {
 		// rawJSON, err := emt.ToGeoJSON()
 		// if err != nil {
@@ -41,18 +43,19 @@ func main() {
 		tags := emt.GetTags()
 		if nv, fl := tags["amenity"]; fl == true {
 			if nv == "school" {
+
+				if fi {
+					fi = false
+				} else {
+					file.Write([]byte(",\n"))
+				}
+
 				rawJSON, err := emt.ToGeoJSON()
 				if err != nil {
 					log.Fatal(err)
 				}
-				_, err = file.Write([]byte(rawJSON))
-				if err != nil {
-					log.Fatal(err)
-				}
-				_, err = file.Write([]byte(",\n"))
-				if err != nil {
-					log.Fatal(err)
-				}
+				file.Write([]byte(rawJSON))
+
 				switch emt.Type {
 				case 0: //Node
 					nc++
@@ -64,12 +67,13 @@ func main() {
 			}
 		}
 	}
+	file.WriteString("]}\n")
+
 	fmt.Printf("Nodes: %d, Ways: %d, Relations: %d\n", nc, wc, rc)
 
 	str1 := "End:"
 	str1 += time.Now().Format("2006-01-02 15:04:05")
 	str1 += "\n"
-	file.WriteString(str1)
 	fmt.Println(str1)
 
 	if err := parser.Err(); err != nil {
